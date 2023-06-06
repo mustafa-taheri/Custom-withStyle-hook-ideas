@@ -1,0 +1,36 @@
+import { useContext } from 'react';
+import { ThemeContext } from '@mui/system';
+import { useTheme } from '@mui/material/styles';
+
+const convertToCssSyntax = (property) => {
+  return property.replace(/([A-Z])/g, '-$1').toLowerCase();
+};
+
+const generateUniqueClassName = () => {
+  return `custom-class-${Math.random().toString(36).substring(2, 7)}`;
+};
+
+const useConvertedStyles = (styles) => {
+  const theme = useTheme() || useContext(ThemeContext);
+
+  const convertedStyles = {};
+  Object.keys(styles).forEach((className) => {
+    const styleValue = styles[className];
+    const convertedStyle = {};
+
+    Object.keys(styleValue).forEach((key) => {
+      convertedStyle[convertToCssSyntax(key)] = styleValue[key];
+    });
+
+    const uniqueClassName = generateUniqueClassName();
+    convertedStyles[className] = uniqueClassName;
+
+    const styleElement = document.createElement('style');
+    styleElement.innerHTML = `.${uniqueClassName} {${Object.entries(convertedStyle).map(([key, value]) => `${key}: ${value};`).join(' ')}}`;
+    document.head.appendChild(styleElement);
+  });
+
+  return convertedStyles;
+};
+
+export default useConvertedStyles;
