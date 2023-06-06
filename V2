@@ -1,0 +1,70 @@
+import { useContext } from 'react';
+import { ThemeContext } from '@mui/system';
+import { useTheme } from '@mui/material/styles';
+
+const convertToCssSyntax = (property) => {
+  return property.replace(/([A-Z])/g, '-$1').toLowerCase();
+};
+
+const generateUniqueClassName = () => {
+  return `custom-class-${Math.random().toString(36).substring(2, 7)}`;
+};
+
+const processStyles = (styles, theme) => {
+  const processedStyles = {};
+
+  Object.keys(styles).forEach((className) => {
+    const styleValue = styles[className];
+    const processedStyle = {};
+
+    Object.keys(styleValue).forEach((key) => {
+      const value = styleValue[key];
+
+      if (typeof value === 'object' && !Array.isArray(value)) {
+        // Process media query styles
+        const mediaStyles = processStyles(value, theme);
+        processedStyle[key] = mediaStyles;
+      } else {
+        processedStyle[convertToCssSyntax(key)] = value;
+      }
+    });
+
+    processedStyles[className] = processedStyle;
+  });
+
+  return processedStyles;
+};
+
+const useConvertedStyles = (styles) => {
+  const theme = useTheme() || useContext(ThemeContext);
+
+  const processedStyles = typeof styles === 'function' ? styles(theme) : styles;
+
+  const convertedStyles = processStyles(processedStyles, theme);
+  const classMapping = {};
+
+  const applyStyles = (stylesObj, parentSelector = '') => {
+    Object.keys(stylesObj).forEach((className) => {
+      const selector = `${parentSelector} .${className}`;
+      const styleValue = stylesObj[className];
+
+      if (typeof styleValue === 'object') {
+        applyStyles(styleValue, selector);
+      } else {
+        const uniqueClassName = generateUniqueClassName();
+
+        const styleElement = document.createElement('style');
+        styleElement.innerHTML = `.${uniqueClassName} {${Object.entries(styleValue).map(([key, value]) => `${key}: ${value};`).join(' ')}}`;
+        document.head.appendChild(styleElement);
+
+        classMapping[className] = uniqueClassName;
+      }
+    });
+  };
+
+  applyStyles(convertedStyles);
+
+  return classMapping;
+};
+
+export default useConvertedStyles;
