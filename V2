@@ -61,9 +61,6 @@ const useConvertedStyles = (styles) => {
       const selector = `${parentSelector} .${className}`;
       const styleValue = stylesObj[className];
 
-      if (typeof styleValue === 'object') {
-        applyStyles(styleValue, selector);
-      } else {
         const uniqueClassName = generateUniqueClassName();
 
         const styleElement = document.createElement('style');
@@ -71,7 +68,7 @@ const useConvertedStyles = (styles) => {
         document.head.appendChild(styleElement);
 
         classMapping[className] = uniqueClassName;
-      }
+
     });
   };
 
