@@ -20,13 +20,26 @@ const processStyles = (styles, theme) => {
     Object.keys(styleValue).forEach((key) => {
       const value = styleValue[key];
 
-      if (typeof value === 'object' && !Array.isArray(value)) {
+   if (typeof value === 'object' && !Array.isArray(value)) {
+
         // Process media query styles
+
         const mediaStyles = processStyles(value, theme);
+
         processedStyle[key] = mediaStyles;
+
+      } else if (typeof value === 'object' && Array.isArray(value)) {
+
+        // Process individual CSS properties
+
+        processedStyle[key] = value.map((v) => `${convertToCssSyntax(key)}: ${v}`).join('; ');
+
       } else {
+
         processedStyle[convertToCssSyntax(key)] = value;
+
       }
+
     });
 
     processedStyles[className] = processedStyle;
