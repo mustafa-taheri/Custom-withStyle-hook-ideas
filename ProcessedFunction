@@ -1,0 +1,29 @@
+
+const processStyles = (styles, theme) => {
+  const processedStyles = {};
+
+  const processStyleValue = (value) => {
+    if (typeof value === 'object' && !Array.isArray(value)) {
+      return processStyles(value, theme);
+    }
+    return value;
+  };
+
+  Object.keys(styles).forEach((className) => {
+    const styleValue = styles[className];
+    const processedStyle = {};
+
+    if (typeof styleValue === 'object' && !Array.isArray(styleValue)) {
+      Object.keys(styleValue).forEach((key) => {
+        const value = styleValue[key];
+        processedStyle[key] = processStyleValue(value);
+      });
+    } else {
+      processedStyles[className] = processStyleValue(styleValue);
+    }
+
+    processedStyles[className] = processedStyle;
+  });
+
+  return processedStyles;
+};
