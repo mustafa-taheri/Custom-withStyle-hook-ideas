@@ -9,21 +9,39 @@ const processStyles = (styles, theme) => {
     return value;
   };
 
-  Object.keys(styles).forEach((className) => {
-    const styleValue = styles[className];
+  const convertToKebabCase = (str) => {
+    return str.replace(/[A-Z]/g, (match) => `-${match.toLowerCase()}`);
+  };
+
+  const processStyle = (styleObj) => {
     const processedStyle = {};
 
-    if (typeof styleValue === 'object' && !Array.isArray(styleValue)) {
-      Object.keys(styleValue).forEach((key) => {
-        const value = styleValue[key];
-        processedStyle[key] = processStyleValue(value);
-      });
-    } else {
-      processedStyles[className] = processStyleValue(styleValue);
-    }
+    Object.keys(styleObj).forEach((key) => {
+      const value = styleObj[key];
+
+      if (typeof value === 'object' && !Array.isArray(value)) {
+        processedStyle[key] = processStyle(value);
+      } else {
+        processedStyle[convertToKebabCase(key)] = processStyleValue(value);
+      }
+    });
+
+    return processedStyle;
+  };
+
+  Object.keys(styles).forEach((className) => {
+    const styleValue = styles[className];
+    const processedStyle = processStyle(styleValue);
 
     processedStyles[className] = processedStyle;
   });
 
   return processedStyles;
 };
+
+
+
+
+
+
+
