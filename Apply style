@@ -6,16 +6,18 @@ const applyStyles = (stylesObj, parentSelector = '') => {
     const uniqueClassName = generateUniqueClassName();
 
     const styleElement = document.createElement('style');
-    const styleRules = Object.entries(styleValue)
-      .map(([key, value]) => {
-        if (typeof value === 'object' && !Array.isArray(value)) {
-          // Process media query styles
-          const mediaQueryStyles = applyStyles({ [key]: value }, selector);
-          return mediaQueryStyles;
-        }
-        return `${key}: ${value};`;
-      })
-      .join(' ');
+    let styleRules = '';
+
+    Object.entries(styleValue).forEach(([key, value]) => {
+      if (typeof value === 'object' && !Array.isArray(value)) {
+        // Process media query styles
+        const mediaQueryStyles = applyStyles({ [className]: value }, parentSelector);
+        styleRules += mediaQueryStyles;
+      } else {
+        // Process regular CSS properties
+        styleRules += `${convertToCssSyntax(key)}: ${value}; `;
+      }
+    });
 
     styleElement.innerHTML = `${selector} { ${styleRules} }`;
     document.head.appendChild(styleElement);
