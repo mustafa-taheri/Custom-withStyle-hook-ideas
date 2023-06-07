@@ -1,6 +1,4 @@
-const applyStyles = (stylesObj, parentSelector = '') => {
-  const classMapping = {};
-
+const applyStyles = (stylesObj, parentSelector = '', classMapping) => {
   Object.entries(stylesObj).forEach(([className, styleValue]) => {
     const selector = `${parentSelector} .${className}`;
     const uniqueClassName = generateUniqueClassName();
@@ -10,7 +8,7 @@ const applyStyles = (stylesObj, parentSelector = '') => {
 
     if (typeof styleValue === 'object' && !Array.isArray(styleValue)) {
       // Process media query styles
-      styleRules = applyStyles(styleValue, selector);
+      applyStyles(styleValue, selector, classMapping);
     } else {
       // Process regular CSS properties
       Object.entries(styleValue).forEach(([key, value]) => {
@@ -23,6 +21,4 @@ const applyStyles = (stylesObj, parentSelector = '') => {
 
     classMapping[className] = uniqueClassName;
   });
-
-  return classMapping;
 };
