@@ -1,0 +1,26 @@
+
+const applyStyles = (stylesObj, parentSelector = '') => {
+  Object.keys(stylesObj).forEach((className) => {
+    const selector = `${parentSelector} .${className}`;
+    const styleValue = stylesObj[className];
+
+    const uniqueClassName = generateUniqueClassName();
+
+    const styleElement = document.createElement('style');
+    const styleRules = Object.entries(styleValue)
+      .map(([key, value]) => {
+        if (typeof value === 'object' && !Array.isArray(value)) {
+          // Process media query styles
+          const mediaQueryStyles = applyStyles(value, selector);
+          return `@media ${key} { ${mediaQueryStyles} }`;
+        }
+        return `${key}: ${value};`;
+      })
+      .join(' ');
+
+    styleElement.innerHTML = `.${uniqueClassName} { ${styleRules} }`;
+    document.head.appendChild(styleElement);
+
+    classMapping[className] = uniqueClassName;
+  });
+};
