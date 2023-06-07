@@ -1,27 +1,28 @@
 const applyStyles = (stylesObj, parentSelector = '') => {
-  Object.keys(stylesObj).forEach((className) => {
-    const selector = `${parentSelector} .${className}`;
-    const styleValue = stylesObj[className];
+  const classMapping = {};
 
+  Object.entries(stylesObj).forEach(([className, styleValue]) => {
+    const selector = `${parentSelector} .${className}`;
     const uniqueClassName = generateUniqueClassName();
 
     const styleElement = document.createElement('style');
     let styleRules = '';
 
-    Object.entries(styleValue).forEach(([key, value]) => {
-      if (typeof value === 'object' && !Array.isArray(value)) {
-        // Process media query styles
-        const mediaQueryStyles = applyStyles({ [className]: value }, parentSelector);
-        styleRules += mediaQueryStyles;
-      } else {
-        // Process regular CSS properties
+    if (typeof styleValue === 'object' && !Array.isArray(styleValue)) {
+      // Process media query styles
+      styleRules = applyStyles(styleValue, selector);
+    } else {
+      // Process regular CSS properties
+      Object.entries(styleValue).forEach(([key, value]) => {
         styleRules += `${convertToCssSyntax(key)}: ${value}; `;
-      }
-    });
+      });
+    }
 
     styleElement.innerHTML = `${selector} { ${styleRules} }`;
     document.head.appendChild(styleElement);
 
     classMapping[className] = uniqueClassName;
   });
+
+  return classMapping;
 };
