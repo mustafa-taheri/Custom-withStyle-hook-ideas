@@ -1,0 +1,55 @@
+const applyStyles = (stylesObj, parentSelector = '') => {
+  Object.keys(stylesObj).forEach((className) => {
+    const selector = `${parentSelector} .${className}`;
+    const styleValue = stylesObj[className];
+
+    const uniqueClassName = generateUniqueGuideMeClassName();
+
+    const processNestedStyles = (nestedStyles, currentSelector = '') => {
+      Object.keys(nestedStyles).forEach((nestedSelector) => {
+        const nestedStyleValue = nestedStyles[nestedSelector];
+
+        if (nestedSelector.startsWith('&')) {
+          // Process nested class selector
+          const nestedClassName = `${uniqueClassName}-${nestedSelector.substr(1)}`;
+          const nestedSelectorString = `${selector}${nestedSelector.substr(1)}`;
+
+          const nestedStyleElement = document.createElement('style');
+          nestedStyleElement.innerHTML = `.${nestedClassName} {${Object.entries(nestedStyleValue).map(([key, value]) => `${key}: ${value};`).join(' ')}}`;
+          document.head.appendChild(nestedStyleElement);
+
+          processNestedStyles({ [nestedSelectorString]: { className: nestedClassName } }, currentSelector);
+        } else if (nestedSelector.startsWith('@media')) {
+          // Process media query
+          const mediaQueryStyles = processNestedStyles(nestedStyleValue, currentSelector);
+          const mediaQueryElement = document.createElement('style');
+          mediaQueryElement.innerHTML = `${nestedSelector} {${mediaQueryStyles}}`;
+          document.head.appendChild(mediaQueryElement);
+        } else if (typeof nestedStyleValue === 'object') {
+          // Process other nested selectors
+          const nestedSelectorString = `${currentSelector} ${nestedSelector}`;
+          const nestedStylesString = processNestedStyles(nestedStyleValue, nestedSelectorString);
+
+          processNestedStyles({ [nestedSelectorString]: nestedStylesString }, currentSelector);
+        } else {
+          // Process direct values
+          const property = convertToCssSyntax(nestedSelector);
+          const value = nestedStyleValue;
+
+          if (property && value) {
+            currentStyles.push(`${property}: ${value};`);
+          }
+        }
+      });
+    };
+
+    const currentStyles = [];
+    processNestedStyles(styleValue, selector);
+
+    const styleElement = document.createElement('style');
+    styleElement.innerHTML = `.${uniqueClassName} {${currentStyles.join(' ')}}`;
+    document.head.appendChild(styleElement);
+
+    _classMapping[className] = uniqueClassName;
+  });
+};
