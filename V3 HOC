@@ -1,0 +1,85 @@
+import { useTheme } from '@material-ui/core';
+import React from 'react';
+
+const generateUniqueGuideMeClassName = () => {
+  return `custom-guideme-css-${Math.random().toString(36).substring(2, 7)}`;
+};
+
+const convertToKebabCase = str => {
+  return str.replace(/[A-Z]/g, match => `-${match.toLowerCase()}`);
+};
+
+const processStyles = (styles, theme, props) => {
+  const processedStyles = {};
+
+  const processStyleValue = value => {
+    if (typeof value === 'object' && !Array.isArray(value)) {
+      return processStyles(value, theme);
+    }
+    return value;
+  };
+
+  const processStyle = styleObj => {
+    const processedStyle = {};
+
+    Object.keys(styleObj).forEach(key => {
+      const value = styleObj[key];
+
+      if (typeof value === 'object' && !Array.isArray(value)) {
+        processedStyle[key] = processStyle(value);
+      } else if (typeof value === 'function') {
+        processedStyle[convertToKebabCase(key)] = value(props);
+      } else {
+        processedStyle[convertToKebabCase(key)] = processStyleValue(value);
+      }
+    });
+
+    return processedStyle;
+  };
+
+  Object.keys(styles).forEach(className => {
+    const styleValue = styles[className];
+    const processedStyle = processStyle(styleValue);
+
+    processedStyles[className] = processedStyle;
+  });
+
+  return processedStyles;
+};
+
+const withStyles = styles => WrappedComponent => {
+  return props => {
+    // const _theme = useTheme() || useContext(ThemeContext);
+    const _theme = useTheme();
+    const _processedStyles =
+      typeof styles === 'function' ? styles(_theme) : styles;
+    const _convertedStyles = processStyles(_processedStyles, _theme, props);
+    console.log('ConvertedStyle ===>', _convertedStyles);
+
+    const _classMapping = {};
+    const applyStyles = (stylesObj, parentSelector = '') => {
+      Object.keys(stylesObj).forEach(className => {
+        const selector = `${parentSelector} .${className}`;
+        const styleValue = stylesObj[className];
+
+        const uniqueClassName = generateUniqueGuideMeClassName();
+
+        const styleElement = document.createElement('style');
+        styleElement.innerHTML = `.${uniqueClassName} {${Object.entries(
+          styleValue
+        )
+          .map(([key, value]) => `${key}: ${value};`)
+          .join(' ')}}`;
+        document.head.appendChild(styleElement);
+
+        _classMapping[className] = uniqueClassName;
+      });
+    };
+
+    applyStyles(_convertedStyles);
+
+    return <WrappedComponent {...props} classes={{ ..._classMapping }} />;
+  };
+};
+
+export default withStyles;
