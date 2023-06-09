@@ -1,26 +1,15 @@
+    const applyStyles = (stylesObj, parentSelector = '') => {
+        Object.keys(stylesObj).forEach((className) => {
+            const selector = `${parentSelector} .${className}`;
+            const styleValue = stylesObj[className];
 
-const applyStyles = (stylesObj, parentSelector = '') => {
-  Object.keys(stylesObj).forEach((className) => {
-    const selector = `${parentSelector} .${className}`;
-    const styleValue = stylesObj[className];
+            const uniqueClassName = generateUniqueGuideMeClassName();
 
-    const uniqueClassName = generateUniqueClassName();
+            const styleElement = document.createElement('style');
+            styleElement.innerHTML = `.${uniqueClassName} {${Object.entries(styleValue).map(([key, value]) => `${key}: ${value};`).join(' ')}}`;
+            document.head.appendChild(styleElement);
 
-    if (typeof styleValue === 'object' && !Array.isArray(styleValue)) {
-      // Process media query styles
-      const mediaQueryStyles = applyStyles(styleValue, selector);
-      classMapping[className] = mediaQueryStyles[className];
-    } else {
-      const styleElement = document.createElement('style');
-      const styleRules = Object.entries(styleValue)
-        .map(([key, value]) => `${convertToCssSyntax(key)}: ${value};`)
-        .join(' ');
+            _classMapping[className] = uniqueClassName;
 
-      styleElement.innerHTML = `${selector} { ${styleRules} }`;
-      document.head.appendChild(styleElement);
-
-      classMapping[className] = uniqueClassName;
-    }
-  });
-};
-
+        });
+    };
