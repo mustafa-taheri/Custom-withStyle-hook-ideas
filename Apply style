@@ -1,15 +1,36 @@
-    const applyStyles = (stylesObj, parentSelector = '') => {
-        Object.keys(stylesObj).forEach((className) => {
-            const selector = `${parentSelector} .${className}`;
-            const styleValue = stylesObj[className];
+    
+  const applyStyles = (stylesObj, parentSelector = '') => {
+  Object.keys(stylesObj).forEach((className) => {
+    const selector = `${parentSelector} .${className}`;
+    const styleValue = stylesObj[className];
 
-            const uniqueClassName = generateUniqueGuideMeClassName();
+    const uniqueClassName = generateUniqueGuideMeClassName();
 
-            const styleElement = document.createElement('style');
-            styleElement.innerHTML = `.${uniqueClassName} {${Object.entries(styleValue).map(([key, value]) => `${key}: ${value};`).join(' ')}}`;
-            document.head.appendChild(styleElement);
+    const styleElement = document.createElement('style');
+    let cssString = '';
 
-            _classMapping[className] = uniqueClassName;
+    // Process nested selectors
+    if (styleValue && typeof styleValue === 'object') {
+      Object.keys(styleValue).forEach((nestedSelector) => {
+        const nestedStyleValue = styleValue[nestedSelector];
 
-        });
-    };
+        if (nestedSelector.startsWith('&')) {
+          // Process nested class selector
+          cssString += `${selector}${nestedSelector.substr(1)} {${Object.entries(nestedStyleValue).map(([key, value]) => `${key}: ${value};`).join(' ')}}`;
+        } else if (nestedSelector.startsWith('@media')) {
+          // Process media query
+          cssString += `${nestedSelector} {${Object.entries(nestedStyleValue).map(([key, value]) => `${key}: ${value};`).join(' ')}}`;
+        } else {
+          // Process other nested selectors
+          cssString += `${selector} ${nestedSelector} {${Object.entries(nestedStyleValue).map(([key, value]) => `${key}: ${value};`).join(' ')}}`;
+        }
+      });
+    }
+
+    styleElement.innerHTML = `.${uniqueClassName} {${cssString}}`;
+    document.head.appendChild(styleElement);
+
+    _classMapping[className] = uniqueClassName;
+  });
+};
+
