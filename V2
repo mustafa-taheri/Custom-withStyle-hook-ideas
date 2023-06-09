@@ -1,80 +1,78 @@
-import { useContext } from 'react';
-import { ThemeContext } from '@mui/system';
-import { useTheme } from '@mui/material/styles';
+import { useContext } from "react"
+import { useTheme } from '@material-ui/core'
+// import {ThemeContext} from '@mui/system'
 
-const convertToCssSyntax = (property) => {
-  return property.replace(/([A-Z])/g, '-$1').toLowerCase();
-};
+const generateUniqueGuideMeClassName = () => {
+    return `custom-guideme-css-${Math.random().toString(36).substring(2, 7)}`
+}
 
-const generateUniqueClassName = () => {
-  return `custom-class-${Math.random().toString(36).substring(2, 7)}`;
+const convertToKebabCase = (str) => {
+    return str.replace(/[A-Z]/g, (match) => `-${match.toLowerCase()}`);
 };
 
 const processStyles = (styles, theme) => {
-  const processedStyles = {};
+    const processedStyles = {};
 
-  Object.keys(styles).forEach((className) => {
-    const styleValue = styles[className];
-    const processedStyle = {};
+    const processStyleValue = (value) => {
+        if (typeof value === 'object' && !Array.isArray(value)) {
+            return processStyles(value, theme);
+        }
+        return value;
+    };
 
-    Object.keys(styleValue).forEach((key) => {
-      const value = styleValue[key];
+    const processStyle = (styleObj) => {
+        const processedStyle = {};
 
-   if (typeof value === 'object' && !Array.isArray(value)) {
+        Object.keys(styleObj).forEach((key) => {
+            const value = styleObj[key];
 
-        // Process media query styles
+            if (typeof value === 'object' && !Array.isArray(value)) {
+                processedStyle[key] = processStyle(value);
+            } else {
+                processedStyle[convertToKebabCase(key)] = processStyleValue(value);
+            }
+        });
 
-        const mediaStyles = processStyles(value, theme);
+        return processedStyle;
+    };
 
-        processedStyle[key] = mediaStyles;
+    Object.keys(styles).forEach((className) => {
+        const styleValue = styles[className];
+        const processedStyle = processStyle(styleValue);
 
-      } else if (typeof value === 'object' && Array.isArray(value)) {
-
-        // Process individual CSS properties
-
-        processedStyle[key] = value.map((v) => `${convertToCssSyntax(key)}: ${v}`).join('; ');
-
-      } else {
-
-        processedStyle[convertToCssSyntax(key)] = value;
-
-      }
-
+        processedStyles[className] = processedStyle;
     });
 
-    processedStyles[className] = processedStyle;
-  });
-
-  return processedStyles;
+    return processedStyles;
 };
 
-const useConvertedStyles = (styles) => {
-  const theme = useTheme() || useContext(ThemeContext);
+const useWithStyles = (styles) => {
+    // const _theme = useTheme() || useContext(ThemeContext)
+    const _theme = useTheme()
+    const _processedStyles = typeof styles === 'function' ? styles(_theme) : styles
+    const _convertedStyles = processStyles(_processedStyles, _theme)
+    console.log('ConvertedStyle ===>', _convertedStyles);
 
-  const processedStyles = typeof styles === 'function' ? styles(theme) : styles;
+    const _classMapping = {}
+    const applyStyles = (stylesObj, parentSelector = '') => {
+        Object.keys(stylesObj).forEach((className) => {
+            const selector = `${parentSelector} .${className}`;
+            const styleValue = stylesObj[className];
 
-  const convertedStyles = processStyles(processedStyles, theme);
-  const classMapping = {};
+            const uniqueClassName = generateUniqueGuideMeClassName();
 
-  const applyStyles = (stylesObj, parentSelector = '') => {
-    Object.keys(stylesObj).forEach((className) => {
-      const selector = `${parentSelector} .${className}`;
-      const styleValue = stylesObj[className];
+            const styleElement = document.createElement('style');
+            styleElement.innerHTML = `.${uniqueClassName} {${Object.entries(styleValue).map(([key, value]) => `${key}: ${value};`).join(' ')}}`;
+            document.head.appendChild(styleElement);
 
-        const uniqueClassName = generateUniqueClassName();
+            _classMapping[className] = uniqueClassName;
 
-        const styleElement = document.createElement('style');
-        styleElement.innerHTML = `.${uniqueClassName} {${Object.entries(styleValue).map(([key, value]) => `${key}: ${value};`).join(' ')}}`;
-        document.head.appendChild(styleElement);
+        });
+    };
 
-        classMapping[className] = uniqueClassName;
+    applyStyles(_convertedStyles)
 
-    });
-  };
+    return _classMapping
+}
 
-  applyStyles(convertedStyles);
-
-  return classMapping;
-};
-
-export default useConvertedStyles;
+export default useWithStyles
