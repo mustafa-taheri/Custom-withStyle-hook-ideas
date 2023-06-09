@@ -1,0 +1,35 @@
+const applyStyles = (stylesObj) => {
+  const styleElements = [];
+
+  const flattenStyles = (styles, parentSelector = '') => {
+    Object.keys(styles).forEach((className) => {
+      const selector = `${parentSelector} .${className}`;
+      const styleValue = styles[className];
+
+      if (typeof styleValue === 'object' && !Array.isArray(styleValue)) {
+        // Process nested styles
+        flattenStyles(styleValue, selector);
+      } else {
+        // Process direct styles
+        const styleString = Object.entries(styleValue)
+          .map(([key, value]) => `${convertToCssSyntax(key)}: ${value};`)
+          .join(' ');
+
+        const uniqueClassName = generateUniqueGuideMeClassName();
+
+        const styleElement = document.createElement('style');
+        styleElement.innerHTML = `.${uniqueClassName}${selector} {${styleString}}`;
+        styleElements.push(styleElement);
+
+        _classMapping[className] = uniqueClassName;
+      }
+    });
+  };
+
+  flattenStyles(stylesObj);
+
+  // Append all style elements to document head
+  styleElements.forEach((styleElement) => {
+    document.head.appendChild(styleElement);
+  });
+};
