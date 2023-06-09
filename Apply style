@@ -1,36 +1,42 @@
     
-  const applyStyles = (stylesObj, parentSelector = '') => {
-  Object.keys(stylesObj).forEach((className) => {
-    const selector = `${parentSelector} .${className}`;
-    const styleValue = stylesObj[className];
+     const applyStyles = (stylesObj, parentSelector = '') => {
+        Object.keys(stylesObj).forEach((className) => {
+            const selector = `${parentSelector} .${className}`;
+            const styleValue = stylesObj[className];
 
-    const uniqueClassName = generateUniqueGuideMeClassName();
+            const uniqueClassName = generateUniqueGuideMeClassName();
 
-    const styleElement = document.createElement('style');
-    let cssString = '';
+            const styleElement = document.createElement('style');
+            let cssString = '';
+            console.log('styleValue ===>>', styleValue);
+            // Process nested selectors
+            if (styleValue && typeof styleValue === 'object') {
+                console.log('styleValue keys ===>>', Object.keys(styleValue));
 
-    // Process nested selectors
-    if (styleValue && typeof styleValue === 'object') {
-      Object.keys(styleValue).forEach((nestedSelector) => {
-        const nestedStyleValue = styleValue[nestedSelector];
+                Object.keys(styleValue).forEach((nestedSelector) => {
+                    const nestedStyleValue = styleValue[nestedSelector];
+                    console.log('nestedStyleValue ===>>', nestedStyleValue);
 
-        if (nestedSelector.startsWith('&')) {
-          // Process nested class selector
-          cssString += `${selector}${nestedSelector.substr(1)} {${Object.entries(nestedStyleValue).map(([key, value]) => `${key}: ${value};`).join(' ')}}`;
-        } else if (nestedSelector.startsWith('@media')) {
-          // Process media query
-          cssString += `${nestedSelector} {${Object.entries(nestedStyleValue).map(([key, value]) => `${key}: ${value};`).join(' ')}}`;
-        } else {
-          // Process other nested selectors
-          cssString += `${selector} ${nestedSelector} {${Object.entries(nestedStyleValue).map(([key, value]) => `${key}: ${value};`).join(' ')}}`;
-        }
-      });
-    }
+                    if (nestedSelector.startsWith('&')) {
+                        // Process nested class selector
+                        cssString += ` ${uniqueClassName}${nestedSelector.substr(1)}: {${Object.entries(nestedStyleValue).map(([key, value]) => `${key}: ${value};`).join(' ')}}`;
+                    } else if (nestedSelector.startsWith('@media')) {
+                        // Process media query
+                        cssString += ` ${nestedSelector} {${Object.entries(nestedStyleValue).map(([key, value]) => `${key}: ${value};`).join(' ')}}`;
+                    } else if (typeof nestedStyleValue === 'object') {
+                        // Process other nested selectors
+                        cssString += ` ${selector} ${nestedSelector} {${Object.entries(nestedStyleValue).map(([key, value]) => `${key}: ${value};`).join(' ')}}`;
+                    } else {
+                        cssString += `${nestedSelector}: ${nestedStyleValue};`
+                    }
+                });
 
-    styleElement.innerHTML = `.${uniqueClassName} {${cssString}}`;
-    document.head.appendChild(styleElement);
+                console.log('CSS String -->>', cssString);
+            }
 
-    _classMapping[className] = uniqueClassName;
-  });
-};
+            styleElement.innerHTML = `.${uniqueClassName} {${cssString}}`;
+            document.head.appendChild(styleElement);
 
+            _classMapping[className] = uniqueClassName;
+        });
+    };
