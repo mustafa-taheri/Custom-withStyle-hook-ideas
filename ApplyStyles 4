@@ -1,11 +1,12 @@
 
-const applyStyles = (stylesObj, parentSelector = '') => {
+const applyStyles = (stylesObj, parentSelector = '', componentName) => {
   const styleElement = document.createElement('style');
   document.head.appendChild(styleElement);
   const styleSheet = styleElement.sheet;
 
-  const generateUniqueClassName = () => {
-    return `custom-class-${Math.random().toString(36).substring(2, 7)}`;
+  const generateUniqueClassName = (className) => {
+    const uniqueId = Math.random().toString(36).substring(2, 7);
+    return `custom-class-${componentName}-${className}-${uniqueId}`;
   };
 
   const processStyleObject = (styleObj, selector) => {
@@ -16,17 +17,16 @@ const applyStyles = (stylesObj, parentSelector = '') => {
       } else {
         const cssProperty = convertToCssSyntax(key);
         const cssValue = value;
-        const uniqueClassName = generateUniqueClassName();
-        const rule = `.${uniqueClassName} { ${cssProperty}: ${cssValue}; }`;
+        const rule = `${selector} { ${cssProperty}: ${cssValue}; }`;
         styleSheet.insertRule(rule, styleSheet.cssRules.length);
-        _classMapping[`${selector}.${key}`] = uniqueClassName;
       }
     });
   };
 
   Object.entries(stylesObj).forEach(([className, styleValue]) => {
     const selector = `${parentSelector} .${className}`;
-    processStyleObject(styleValue, selector);
-    _classMapping[className] = className;
+    const uniqueClassName = generateUniqueClassName(className);
+    processStyleObject(styleValue, `.${uniqueClassName}`);
+    _classMapping[className] = uniqueClassName;
   });
 };
