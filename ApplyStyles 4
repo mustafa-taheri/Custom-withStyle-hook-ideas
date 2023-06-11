@@ -1,28 +1,34 @@
 
 const applyStyles = (stylesObj, parentSelector = '') => {
   const styleElement = document.createElement('style');
-  document.head.appendChild(styleElement);
   const styleSheet = styleElement.sheet;
-
-  const processStyleObject = (styleObj, selector) => {
-    Object.entries(styleObj).forEach(([key, value]) => {
-      if (typeof value === 'object') {
-        const nestedSelector = key.startsWith('@media') ? key : `${selector} ${key}`;
-        processStyleObject(value, nestedSelector);
-      } else {
-        const cssProperty = convertToCssSyntax(key);
-        const cssValue = value;
-        const rule = `${selector} { ${cssProperty}: ${cssValue}; }`;
-        styleSheet.insertRule(rule, styleSheet.cssRules.length);
-      }
-    });
-  };
 
   Object.entries(stylesObj).forEach(([className, styleValue]) => {
     const selector = `${parentSelector} .${className}`;
     const uniqueClassName = generateUniqueClassName();
     const uniqueSelector = `${selector}.${uniqueClassName}`;
+
+    let styleString = '';
+
+    const processStyleObject = (styleObj, selector) => {
+      Object.entries(styleObj).forEach(([key, value]) => {
+        if (typeof value === 'object') {
+          const nestedSelector = key.startsWith('@media') ? key : `${selector} ${key}`;
+          processStyleObject(value, nestedSelector);
+        } else {
+          const cssProperty = convertToCssSyntax(key);
+          const cssValue = value;
+          styleString += `${cssProperty}: ${cssValue}; `;
+        }
+      });
+    };
+
     processStyleObject(styleValue, uniqueSelector);
+
+    const rule = `${uniqueSelector} { ${styleString} }`;
+    styleSheet.insertRule(rule, styleSheet.cssRules.length);
     _classMapping[className] = uniqueClassName;
   });
+
+  document.head.appendChild(styleElement);
 };
