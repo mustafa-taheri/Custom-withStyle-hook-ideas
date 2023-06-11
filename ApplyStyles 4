@@ -1,1 +1,39 @@
 
+const applyStyles = (stylesObj, parentSelector = '') => {
+  const cssRules = [];
+
+  Object.keys(stylesObj).forEach((className) => {
+    const selector = `${parentSelector} .${className}`;
+    const styleValue = stylesObj[className];
+
+    const uniqueClassName = generateUniqueGuideMeClassName();
+    _classMapping[className] = uniqueClassName;
+
+    let cssRule = `${selector} {`;
+
+    Object.keys(styleValue).forEach((key) => {
+      const value = styleValue[key];
+
+      if (typeof value === 'object' && !Array.isArray(value)) {
+        // Handle nested styles
+        const nestedStyles = applyStyles({ [key]: value }, selector);
+        cssRule += nestedStyles;
+      } else if (typeof value === 'object' && Array.isArray(value)) {
+        // Handle CSS properties
+        const cssProperties = value.map((v) => `${convertToCssSyntax(key)}: ${v}`).join('; ');
+        cssRule += `${cssProperties};`;
+      } else {
+        // Handle direct CSS properties
+        cssRule += `${convertToCssSyntax(key)}: ${value};`;
+      }
+    });
+
+    cssRule += `}`;
+
+    cssRules.push(cssRule);
+  });
+
+  const styleElement = document.createElement('style');
+  styleElement.innerHTML = cssRules.join(' ');
+  document.head.appendChild(styleElement);
+};
