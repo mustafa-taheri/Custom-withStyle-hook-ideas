@@ -20,7 +20,9 @@ const applyStyles = (stylesObj, parentSelector = '') => {
 
   Object.entries(stylesObj).forEach(([className, styleValue]) => {
     const selector = `${parentSelector} .${className}`;
-    processStyleObject(styleValue, selector);
-    _classMapping[className] = className;
+    const uniqueClassName = generateUniqueClassName();
+    const uniqueSelector = `${selector}.${uniqueClassName}`;
+    processStyleObject(styleValue, uniqueSelector);
+    _classMapping[className] = uniqueClassName;
   });
 };
