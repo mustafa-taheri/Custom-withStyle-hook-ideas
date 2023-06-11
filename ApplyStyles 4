@@ -12,8 +12,15 @@ const applyStyles = (stylesObj, parentSelector = '', componentName) => {
   const processStyleObject = (styleObj, selector) => {
     Object.entries(styleObj).forEach(([key, value]) => {
       if (typeof value === 'object') {
-        const nestedSelector = key.startsWith('@media') ? key : `${selector} ${key}`;
-        processStyleObject(value, nestedSelector);
+        if (key.startsWith('@media')) {
+          const mediaQuery = key;
+          styleSheet.insertRule(`${mediaQuery} {`, styleSheet.cssRules.length);
+          processStyleObject(value, selector);
+          styleSheet.insertRule(`}`, styleSheet.cssRules.length);
+        } else {
+          const nestedSelector = `${selector} ${key}`;
+          processStyleObject(value, nestedSelector);
+        }
       } else {
         const cssProperty = convertToCssSyntax(key);
         const cssValue = value;
