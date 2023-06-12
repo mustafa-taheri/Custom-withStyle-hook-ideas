@@ -1,8 +1,10 @@
 import { useTheme } from '@material-ui/core';
 import React from 'react';
 
-const generateUniqueGuideMeClassName = () => {
-  return `custom-guideme-css-${Math.random().toString(36).substring(2, 7)}`;
+const generateUniqueGuideMeClassName = className => {
+  return `custom-guideme-css-${Math.random()
+    .toString(36)
+    .substring(2, 7)}-${className}`;
 };
 
 const convertToKebabCase = str => {
@@ -47,9 +49,74 @@ const processStyles = (styles, theme, props) => {
   return processedStyles;
 };
 
+/**
+ * cssStyleObjectStructuring function helps to create a structured css style object along with custom css class names and media queries
+< ----- Example of how the object is structured ----->
+.custom-guideme-css-73tuv: {display: 'grid;', grid-template-columns: 'auto repeat(4, 96px);', padding: '10px 30px;', background-color: '#FFFFFF;', box-shadow: 'inset 0px -1px 0px  #E9ECEE;', …}
+.custom-guideme-css-73tuv p: {color: '#1A2555;', font-size: '16px;', line-height: '26px;', letter-spacing: ';', text-transform: ';', …}
+.custom-guideme-css-73tuv p:nth-child(1): {text-align: 'start;', font-size: '14px;', font-weight: '700;'}
+.custom-guideme-css-73tuv p:nth-child(2): {font-weight: ';', padding-right: ';'}
+@media (max-width:1023.95px): {.custom-guideme-css-73tuv p: '{font-size:14px;}', .custom-guideme-css-73tuv p:nth-child(1): '{font-size:12px !important;}', .custom-guideme-css-73tuv p:nth-child(2): '{padding-right:;}', .custom-guideme-css-73tuv: '{grid-template-columns:auto 64px 64px 84px 94px; column-gap:10px;}'}
+@media (min-width:1420px): {.custom-guideme-css-73tuv p:nth-child(2): '{padding-right:;}', .custom-guideme-css-73tuv: '{grid-template-columns:auto repeat(4, 96px); column-gap:30px;}'}
+ */
+
+function cssStyleObjectStructuring(
+  key,
+  value,
+  uniqueClassName,
+  cssStyleObj,
+  parentSelector
+) {
+  if (typeof value === 'object') {
+    let name = `${key.replace('&', parentSelector || `.${uniqueClassName}`)}`;
+    if (key.startsWith('@media')) {
+      cssStyleObj[key] = {
+        ...cssStyleObj[key],
+        [parentSelector || `.${uniqueClassName}`]: `{${Object.entries(value)
+          .map(([key, value]) =>
+            typeof value === 'object'
+              ? cssStyleObjectStructuring(
+                  key,
+                  value,
+                  uniqueClassName,
+                  cssStyleObj,
+                  name
+                )
+              : `${key}:${value};`
+          )
+          .join(' ')}}`
+      };
+    } else {
+      cssStyleObj[name] = Object.entries(value).reduce(
+        (empObj, [key, value]) => {
+          typeof value === 'object'
+            ? cssStyleObjectStructuring(
+                key,
+                value,
+                uniqueClassName,
+                cssStyleObj,
+                name
+              )
+            : (empObj[key] = `${value};`);
+          return empObj;
+        },
+        {}
+      );
+    }
+  } else {
+    cssStyleObj[`.${uniqueClassName}`] = {
+      ...cssStyleObj[`.${uniqueClassName}`],
+      [key]: `${value};`
+    };
+  }
+}
+
 const withStyles = styles => WrappedComponent => {
   return props => {
     // const _theme = useTheme() || useContext(ThemeContext);
+    if (!Object.keys(styles).length)
+      return <WrappedComponent {...props} classes={{}} />;
+
     const _theme = useTheme();
     const _processedStyles =
       typeof styles === 'function' ? styles(_theme) : styles;
@@ -59,17 +126,33 @@ const withStyles = styles => WrappedComponent => {
     const _classMapping = {};
     const applyStyles = (stylesObj, parentSelector = '') => {
       Object.keys(stylesObj).forEach(className => {
-        const selector = `${parentSelector} .${className}`;
+        // const selector = `${parentSelector} .${className}`;
         const styleValue = stylesObj[className];
 
-        const uniqueClassName = generateUniqueGuideMeClassName();
+        const uniqueClassName = generateUniqueGuideMeClassName(className);
 
         const styleElement = document.createElement('style');
-        styleElement.innerHTML = `.${uniqueClassName} {${Object.entries(
-          styleValue
-        )
-          .map(([key, value]) => `${key}: ${value};`)
-          .join(' ')}}`;
+
+        let cssStyleObj = {};
+
+        Object.entries(styleValue).forEach(([key, value]) => {
+          cssStyleObjectStructuring(key, value, uniqueClassName, cssStyleObj);
+        });
+
+        styleElement.innerHTML = Object.keys(cssStyleObj)
+          .sort()
+          .map(
+            key =>
+              `${key} {\n${Object.entries(cssStyleObj[key])
+                .map(([objkey, objValue]) =>
+                  key.startsWith('@media')
+                    ? `${objkey} ${objValue}\n`
+                    : `${objkey}:${objValue}\n`
+                )
+                .join(' ')}}`
+          )
+          .join('\n\n');
+
         document.head.appendChild(styleElement);
 
         _classMapping[className] = uniqueClassName;
