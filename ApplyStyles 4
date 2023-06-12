@@ -1,39 +1,42 @@
 
-const applyStyles = (stylesObj, parentSelector = '', componentName) => {
-  const styleElement = document.createElement('style');
-  document.head.appendChild(styleElement);
-  const styleSheet = styleElement.sheet;
+const applyStyles = (stylesObj, parentSelector = '') => {
+  const styleSheet = new CSSStyleSheet();
+  const uniqueClassNameMap = {};
 
-  const generateUniqueClassName = (className) => {
-    const uniqueId = Math.random().toString(36).substring(2, 7);
-    return `custom-class-${componentName}-${className}-${uniqueId}`;
-  };
-
-  const processStyleObject = (styleObj, selector) => {
-    Object.entries(styleObj).forEach(([key, value]) => {
-      if (typeof value === 'object') {
-        if (key.startsWith('@media')) {
-          const mediaQuery = key;
-          styleSheet.insertRule(`${mediaQuery} {`, styleSheet.cssRules.length);
-          processStyleObject(value, selector);
-          styleSheet.insertRule(`}`, styleSheet.cssRules.length);
-        } else {
-          const nestedSelector = `${selector} ${key}`;
-          processStyleObject(value, nestedSelector);
-        }
-      } else {
-        const cssProperty = convertToCssSyntax(key);
-        const cssValue = value;
-        const rule = `${selector} { ${cssProperty}: ${cssValue}; }`;
-        styleSheet.insertRule(rule, styleSheet.cssRules.length);
-      }
-    });
-  };
-
-  Object.entries(stylesObj).forEach(([className, styleValue]) => {
+  Object.keys(stylesObj).forEach((className) => {
     const selector = `${parentSelector} .${className}`;
-    const uniqueClassName = generateUniqueClassName(className);
-    processStyleObject(styleValue, `.${uniqueClassName}`);
-    _classMapping[className] = uniqueClassName;
+    const styleValue = stylesObj[className];
+
+    const uniqueClassName = generateUniqueGuideMeClassName();
+    uniqueClassNameMap[className] = uniqueClassName;
+
+    let cssString = '';
+
+    // Process nested selectors
+    if (styleValue && typeof styleValue === 'object') {
+      Object.keys(styleValue).forEach((nestedSelector) => {
+        const nestedStyleValue = styleValue[nestedSelector];
+
+        if (nestedSelector.startsWith('&')) {
+          // Process nested class selector
+          cssString += `${selector}${nestedSelector.substr(1)} {${Object.entries(nestedStyleValue).map(([key, value]) => `${key}: ${value};`).join(' ')}}`;
+        } else if (nestedSelector.startsWith('@media')) {
+          // Process media query
+          cssString += `${nestedSelector} {${Object.entries(nestedStyleValue).map(([key, value]) => `${key}: ${value};`).join(' ')}}`;
+        } else if (typeof nestedStyleValue === 'object') {
+          // Process other nested selectors
+          cssString += `${selector} ${nestedSelector} {${Object.entries(nestedStyleValue).map(([key, value]) => `${key}: ${value};`).join(' ')}}`;
+        } else {
+          // Process direct values
+          cssString += `${selector} {${convertToCssSyntax(nestedSelector)}: ${nestedStyleValue};}`;
+        }
+      });
+    }
+
+    styleSheet.insertRule(`.${uniqueClassName} {${cssString}}`);
   });
+
+  document.adoptedStyleSheets = [...document.adoptedStyleSheets, styleSheet];
+
+  return uniqueClassNameMap;
 };
