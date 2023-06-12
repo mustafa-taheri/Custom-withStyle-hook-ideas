@@ -68,7 +68,10 @@ function cssStyleObjectStructuring(
   parentSelector
 ) {
   if (typeof value === 'object') {
-    let name = `${key.replace('&', parentSelector || `.${uniqueClassName}`)}`;
+    let name = `${key.replaceAll(
+      '&',
+      parentSelector || `.${uniqueClassName}`
+    )}`;
     if (key.startsWith('@media')) {
       cssStyleObj[key] = {
         ...cssStyleObj[key],
@@ -114,12 +117,13 @@ function cssStyleObjectStructuring(
 const withStyles = styles => WrappedComponent => {
   return props => {
     // const _theme = useTheme() || useContext(ThemeContext);
-    if (!Object.keys(styles).length)
-      return <WrappedComponent {...props} classes={{}} />;
-
     const _theme = useTheme();
     const _processedStyles =
       typeof styles === 'function' ? styles(_theme) : styles;
+
+    if (!Object.keys(_processedStyles).length)
+      return <WrappedComponent {...props} classes={{}} />;
+
     const _convertedStyles = processStyles(_processedStyles, _theme, props);
     console.log('ConvertedStyle ===>', _convertedStyles);
 
@@ -154,7 +158,7 @@ const withStyles = styles => WrappedComponent => {
           .join('\n\n');
 
         document.head.appendChild(styleElement);
-
+        console.log(cssStyleObj);
         _classMapping[className] = uniqueClassName;
       });
     };
