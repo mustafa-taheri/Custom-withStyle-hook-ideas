@@ -1,0 +1,101 @@
+import { useTheme } from '@material-ui/core';
+import React from 'react';
+
+const generateUniqueGuideMeClassName = (className) => {
+  return `custom-guideme-css-${Math.random().toString(36).substring(2, 7)}-${className}`;
+};
+
+const convertToKebabCase = (str) => {
+  return str.replace(/[A-Z]/g, (match) => `-${match.toLowerCase()}`);
+};
+
+const processStyles = (styles, theme, props) => {
+  const processedStyles = {};
+
+  const processStyleValue = (value) => {
+    if (typeof value === 'object' && !Array.isArray(value)) {
+      return processStyles(value, theme, props);
+    }
+    return value;
+  };
+
+  const processStyle = (styleObj) => {
+    const processedStyle = {};
+
+    Object.keys(styleObj).forEach((key) => {
+      const value = styleObj[key];
+
+      if (typeof value === 'object' && !Array.isArray(value)) {
+        processedStyle[key] = processStyle(value);
+      } else if (typeof value === 'function') {
+        processedStyle[convertToKebabCase(key)] = value(props);
+      } else {
+        processedStyle[convertToKebabCase(key)] = processStyleValue(value);
+      }
+    });
+
+    return processedStyle;
+  };
+
+  Object.keys(styles).forEach((className) => {
+    const styleValue = styles[className];
+    const processedStyle = processStyle(styleValue);
+
+    processedStyles[className] = processedStyle;
+  });
+
+  return processedStyles;
+};
+
+const withStyles = (styles) => (WrappedComponent) => {
+  return (props) => {
+    const theme = useTheme();
+    const processedStyles = typeof styles === 'function' ? styles(theme) : styles;
+
+    if (!Object.keys(processedStyles).length) {
+      return <WrappedComponent {...props} classes={{}} />;
+    }
+
+    const convertedStyles = processStyles(processedStyles, theme, props);
+    const classMapping = {};
+
+    const applyStyles = (stylesObj, parentSelector = '') => {
+      Object.keys(stylesObj).forEach((className) => {
+        const styleValue = stylesObj[className];
+
+        const uniqueClassName = generateUniqueGuideMeClassName(className);
+
+        const styleElement = document.createElement('style');
+
+        let cssString = '';
+
+        Object.entries(styleValue).forEach(([key, value]) => {
+          if (typeof value === 'object' && !Array.isArray(value)) {
+            // Handle media queries
+            cssString += `${key} {${Object.entries(value)
+              .map(([queryKey, queryValue]) => {
+                const processedQueryValue = processStyleValue(queryValue);
+                return `${queryKey} {${Object.entries(processedQueryValue)
+                  .map(([nestedKey, nestedValue]) => `${nestedKey}: ${nestedValue};`)
+                  .join(' ')}}`;
+              })
+              .join(' ')}}`;
+          } else {
+            cssString += `${key}: ${value};`;
+          }
+        });
+
+        styleElement.innerHTML = `.${uniqueClassName} ${parentSelector} {${cssString}}`;
+        document.head.appendChild(styleElement);
+
+        classMapping[className] = uniqueClassName;
+      });
+    };
+
+    applyStyles(convertedStyles);
+
+    return <WrappedComponent {...props} classes={{ ...classMapping }} />;
+  };
+};
+
+export default withStyles;
