@@ -1,0 +1,151 @@
+import React from 'react';
+import hoistNonReactStatics from 'hoist-non-react-statics';
+import jss, { StyleSheet } from 'jss';
+import { create } from 'jss';
+import preset from 'jss-preset-default';
+import { ThemeContext } from './ThemeProvider';
+import createMuiTheme from './createMuiTheme';
+import { getStylesCreator } from './createStyles';
+
+// Use a singleton instance.
+const jssImpl = create(preset());
+
+// Exported for test purposes.
+export const sheetsManager = new Map();
+
+export default function withStyles(stylesOrCreator, options = {}) {
+  const {
+    withTheme = false,
+    flip = null,
+    name,
+    ...styleSheetOptions
+  } = options;
+
+  return function (Component) {
+    const stylesCreator =
+      typeof stylesOrCreator === 'function' ? stylesOrCreator : () => stylesOrCreator;
+
+    function WithStyles(props) {
+      const { classes: classesProp, innerRef, theme: themeProp, ...other } = props;
+      const theme = React.useContext(ThemeContext) || themeProp || createMuiTheme();
+      const sheetsManager = React.useContext(SheetsRegistryContext);
+      const sheetManager = sheetsManager || sheetsManagerProxy;
+      const styles = stylesCreator(theme);
+
+      const sheetOptions = {
+        ...styleSheetOptions,
+        generateId: sheetManager.getGenerateClassName(),
+        ...styles.options,
+      };
+
+      const sheet = React.useMemo(() => {
+        const { classes: baseClasses, ...rest } = stylesCreator(theme);
+        const jssSheet = jssImpl.createStyleSheet(rest, {
+          link: false,
+          ...sheetOptions,
+        });
+        jssSheet.attach();
+
+        return jssSheet;
+      }, [JSON.stringify(styles), sheetManager.getGenerateClassName()]);
+
+      React.useEffect(() => {
+        if (sheetManager === sheetsManagerProxy) {
+          return () => {
+            sheetManager.remove(sheet);
+          };
+        }
+
+        return undefined;
+      }, [sheet, sheetManager]);
+
+      const classes = React.useMemo(() => {
+        const classes = sheet.classes;
+        if (flip) {
+          const newClasses = {};
+          for (const name in classes) {
+            newClasses[name] = `${classes[name]}-${flip}`;
+          }
+          return newClasses;
+        }
+        return classes;
+      }, [flip, sheet.classes]);
+
+      if (process.env.NODE_ENV !== 'production') {
+        // eslint-disable-next-line react-hooks/rules-of-hooks
+        React.useMemo(() => {
+          const displayNames = [];
+          if (Component.displayName) {
+            displayNames.push(Component.displayName);
+          }
+          if (Component.name) {
+            displayNames.push(Component.name);
+          }
+          if (displayNames.length === 0) {
+            throw new Error(
+              [
+                'Material-UI: The component you are trying to wrap doesn\'t seem to have a displayName nor a name.',
+                'Please consider adding a displayName to your component for better debuggability.',
+              ].join('\n'),
+            );
+          }
+          const displayName = displayNames.join(' ');
+          if (sheetsManager) {
+            sheetsManager.add(sheet);
+            const sheetsRegistry = sheetsManager.get();
+            if (sheetsRegistry[displayName]) {
+              throw new Error(
+                [
+                  `Material-UI: You are calling ${displayName} multiple times.`,
+                  'This is not supported and might cause some issues.',
+                ].join('\n'),
+              );
+            }
+            sheetsRegistry[displayName] = sheet;
+          }
+          return () => {
+            if (sheetsManager) {
+              sheetsManager.remove(sheet);
+              const sheetsRegistry = sheetsManager.get();
+              delete sheetsRegistry[displayName];
+            }
+          };
+        }, [Component]);
+      }
+
+      const more = {};
+
+      if (withTheme) {
+        more.theme = theme;
+      }
+
+      if (innerRef) {
+        more.ref = innerRef;
+      }
+
+      return <Component classes={classes} {...more} {...other} />;
+    }
+
+    WithStyles.displayName = `WithStyles(${Component.displayName || Component.name})`;
+
+    if (process.env.NODE_ENV !== 'production') {
+      WithStyles.propTypes = {
+        /**
+         * Override or extend the styles applied to the component.
+         */
+        classes: PropTypes.object,
+        /**
+         * Use that prop to pass a ref to the decorated component.
+         * @deprecated
+         */
+        innerRef: PropTypes.oneOfType([PropTypes.func, PropTypes.object]),
+        /**
+         * @ignore
+         */
+        theme: PropTypes.object,
+      };
+    }
+
+    return hoistNonReactStatics(WithStyles, Component);
+  };
+}
