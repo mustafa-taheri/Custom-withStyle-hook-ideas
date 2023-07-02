@@ -1,0 +1,83 @@
+import { useTheme } from '@material-ui/core';
+import React from 'react';
+
+const generateUniqueGuideMeClassName = (className) => {
+  return `custom-guideme-css-${Math.random().toString(36).substring(2, 7)}-${className}`;
+};
+
+const convertToKebabCase = (str) => {
+  return str.replace(/[A-Z]/g, (match) => `-${match.toLowerCase()}`);
+};
+
+const processStyles = (styles, theme, props) => {
+  const processedStyles = {};
+
+  const processStyleValue = (value) => {
+    if (typeof value === 'object' && !Array.isArray(value)) {
+      return processStyles(value, theme, props);
+    }
+    return value;
+  };
+
+  const processStyle = (styleObj) => {
+    const processedStyle = {};
+
+    Object.keys(styleObj).forEach((key) => {
+      const value = styleObj[key];
+
+      if (typeof value === 'object' && !Array.isArray(value)) {
+        processedStyle[key] = processStyle(value);
+      } else if (typeof value === 'function') {
+        processedStyle[convertToKebabCase(key)] = value(props);
+      } else {
+        processedStyle[convertToKebabCase(key)] = processStyleValue(value);
+      }
+    });
+
+    return processedStyle;
+  };
+
+  Object.keys(styles).forEach((className) => {
+    const styleValue = styles[className];
+    const processedStyle = processStyle(styleValue);
+
+    processedStyles[className] = processedStyle;
+  });
+
+  return processedStyles;
+};
+
+const applyStyles = (stylesObj, parentSelector = '') => {
+  const styleElement = document.createElement('style');
+  let cssString = '';
+
+  Object.entries(stylesObj).forEach(([className, styleValue]) => {
+    cssString += `.${className} ${parentSelector} {${Object.entries(styleValue)
+      .map(([key, value]) => `${key}: ${value};`)
+      .join(' ')}}`;
+  });
+
+  styleElement.innerHTML = cssString;
+  document.head.appendChild(styleElement);
+};
+
+const withStyles = (styles) => (WrappedComponent) => {
+  return (props) => {
+    const theme = useTheme();
+    const processedStyles = typeof styles === 'function' ? styles(theme) : styles;
+
+    if (!Object.keys(processedStyles).length) {
+      return <WrappedComponent {...props} />;
+    }
+
+    const convertedStyles = processStyles(processedStyles, theme, props);
+
+    const className = generateUniqueGuideMeClassName(WrappedComponent.displayName);
+
+    applyStyles(convertedStyles, `.${className}`);
+
+    return <WrappedComponent {...props} classes={className} />;
+  };
+};
+
+export default withStyles;
