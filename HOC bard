@@ -80,4 +80,27 @@ const withStyles = (styles) => (WrappedComponent) => {
   };
 };
 
+{/* const withStyles = (styles) => (WrappedComponent) => {
+  const [className, setClassName] = useState('');
+
+  useMemo(() => {
+    const generatedClassName = generateUniqueGuideMeClassName(WrappedComponent.displayName);
+    setClassName(generatedClassName);
+  }, []);
+
+  return (props) => {
+    const theme = useTheme();
+    const processedStyles = typeof styles === 'function' ? styles(theme) : styles;
+
+    if (!Object.keys(processedStyles).length) {
+      return <WrappedComponent {...props} />;
+    }
+
+    const convertedStyles = processStyles(processedStyles, theme, props);
+
+    applyStyles(convertedStyles, `.${className}`);
+
+    return <WrappedComponent {...props} classes={className} />;
+  };
+}; */}
 export default withStyles;
